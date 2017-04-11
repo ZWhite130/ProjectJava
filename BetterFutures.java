@@ -17,7 +17,8 @@ public class BetterFutures {
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 			}
-			connection = DriverManager.getConnection("jdbc:oracle:thin:@unixs.cis.pitt.edu:1521:dbclass", "ztw9", "3713993");
+			//MUST BE CLASS3
+			connection = DriverManager.getConnection("jdbc:oracle:thin:@class3.cs.pitt.edu:1521:dbclass", "rlb97", "3938666");
 			
 			//Set connection isolation level & commit preference
 			connection.setAutoCommit(false);
@@ -37,12 +38,14 @@ public class BetterFutures {
 		System.out.println("1) Admin\n2) Customer\n");
 		
 		String input = null;
-		Scanner keyboard = new Scanner(System.in);
+		Scanner keyboard = new Scanner(System.in); //CLOSE KEYBOARD
 		input = keyboard.nextLine();
+		System.out.println(input);
 		while(!input.equals("1") && !input.equals("2"))
 		{
 			System.out.println("Please enter an option");
 			input = keyboard.nextLine();
+			System.out.println(input);
 		}
 		
 		if(input.equals("1"))
@@ -55,16 +58,22 @@ public class BetterFutures {
 		
 		System.out.print("\nPlease enter username: ");
 		userName = keyboard.nextLine();
-		System.out.print("\nPlease enter password: ");
+		System.out.println(userName);
+		System.out.print("Please enter password: ");
 		password = keyboard.nextLine();
+		System.out.println(password);
 		
 		while(!checkLogin(userName, password, isAdmin))
 		{
 			System.out.print("\nCould Not Authenticate\n\nPlease enter username: ");
 			userName = keyboard.nextLine();
-			System.out.print("\nPlease enter password: ");
+		System.out.println(userName);
+			System.out.print("Please enter password: ");
 			password = keyboard.nextLine();
+		System.out.println(password);
 		}
+		
+		connection.close();
 	}
 
 	private static boolean checkLogin(String userName, String password, boolean isAdmin)
@@ -75,21 +84,23 @@ public class BetterFutures {
 			
 			if(isAdmin)
 			{
-				ps = connection.prepareStatement("SELECT * FROM ADMINISTRATOR WHERE login = ? AND password = ?");
-				ps.setString(1, userName);
-				ps.setString(2, password);
+				ps = connection.prepareStatement("SELECT * FROM ADMINISTRATOR");// WHERE login = ? AND password = ?");
+				//ps.setString(1, userName);
+				//ps.setString(2, password);
 			}
 			else
 			{
-					ps = connection.prepareStatement("SELECT * FROM CUSTOMER WHERE login = ? AND password = ?");
-					ps.setString(1, userName);
-					ps.setString(2, password);
+					ps = connection.prepareStatement("SELECT * FROM CUSTOMER");// WHERE login = ? AND password = ?");
+					//ps.setString(1, userName);
+					//ps.setString(2, password);
 			}
 			
 			ResultSet rs = ps.executeQuery();
-			
+	
 			while(rs.next())
 			{
+				System.out.println(rs.getString(1));
+				System.out.println(rs.getString(5));
 				if(rs.getString(1).equals(userName) && rs.getString(5).equals(password))
 				{
 					return true;
