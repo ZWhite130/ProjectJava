@@ -183,13 +183,13 @@ public class BetterFutures {
 				input = keyboard.nextLine();
 			}
 			
-			if(input.equals("1"){			//Register new customer
+			if(input.equals("1")){			//Register new customer
 				
-			}else if(input.equals("2"){		//Update Share Quotas
+			}else if(input.equals("2")){		//Update Share Quotas
 				
-			}else if(input.equals("3"){		//Add Mutual Fund
+			}else if(input.equals("3")){		//Add Mutual Fund
 				
-			}else if(input.equals("4"){		//Update Time and Date
+			}else if(input.equals("4")){		//Update Time and Date
 				
 			}else if(input.equals("5")){	//Statistics
 				
@@ -231,7 +231,7 @@ public class BetterFutures {
 			{
 				browseMutualFunds();
 			}else if(input.equals("2")){	//Search Mutual Funds
-				
+				searchMutualFunds();
 			}else if(input.equals("3")){	//Deposit + Invest
 				
 			}else if(input.equals("4")){	//Sell Shares
@@ -246,6 +246,57 @@ public class BetterFutures {
 				
 			}else if(input.equals("9")){	//Exit Program
 				return;
+			}
+		}
+	}
+	
+	//Customer Option 2
+	//Allow...
+	private static void searchMutualFunds()
+	{
+		String keyword1 = null;
+		String keyword2 = null;
+		
+		System.out.print("\nEnter keyword 1: ");
+		keyword1 = keyboard.nextLine();
+		
+		System.out.print("Enter keyword 2 (Optional): ");
+		keyword2 = keyboard.nextLine();
+		System.out.print("keyword 2 " + keyword2); //TEST
+		
+		if(!keyword2.equals("")) //If 2 keywords entered
+		{
+			String query = "SELECT * FROM mutualfund WHERE description LIKE ? AND description LIKE ?";
+			
+			try
+			{
+				ps = connection.prepareStatement(query);
+				ps.setString(1, "%" + keyword1 + "%");
+				ps.setString(2, "%" + keyword2 + "%");
+				
+				rs = ps.executeQuery();
+				printRS(rs);
+			}
+			catch (SQLException e)
+			{
+				e.printStackTrace();
+			}
+		}
+		else //If 1 keyword entered
+		{
+			String query = "SELECT * FROM mutualfund WHERE description LIKE ?";
+			
+			try
+			{
+				ps = connection.prepareStatement(query);
+				ps.setString(1, "%" + keyword1 + "%");
+				
+				rs = ps.executeQuery();
+				printRS(rs);
+			}
+			catch (SQLException e)
+			{
+				e.printStackTrace();
 			}
 		}
 	}
