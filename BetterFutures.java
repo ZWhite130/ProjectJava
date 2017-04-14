@@ -245,11 +245,174 @@ public class BetterFutures {
 			}else if(input.equals("7")){	//Change Allocation Preference
 				changeAllocationPreferences();
 			}else if(input.equals("8")){	//Customer Portfolio
-				
+				customerPortfolio();
 			}else if(input.equals("9")){	//Exit Program
 				return;
 			}
 		}
+	}
+	
+	private static void customerPortfolio()
+	{
+		String dateString = "";
+		
+		System.out.print("\nPlease enter a date (in format YYYY-MM-DD): ");
+		dateString = keyboard.nextLine();
+		
+		String query = "SELECT * FROM CLOSINGPRICE WHERE p_date = to_date(?, 'YYYY-MM-DD')";
+		
+		try
+		{
+			ps = connection.prepareStatement(query);
+			ps.setString(1, dateString);
+			
+			rs = ps.executeQuery();
+			
+			if(!rs.next())
+			{
+				System.out.println("\nDate does not exist in database");
+				return;
+			}
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		try
+		{
+			connection.commit();
+			connection.setAutoCommit(false);
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		query = "SELECT * FROM MUTUALFUND M JOIN CLOSINGPRICE C ON M.symbol = C.symbol WHERE C.p_date = to_date(?, 'YYYY-MM-DD')";
+		ResultSet mutualFundSnapshotRS = null;
+		ResultSet mutualFundSnapshotRS2 = null;
+		
+		try
+		{
+			ps = connection.prepareStatement(query);
+			ps.setString(1, dateString);
+			
+			mutualFundSnapshotRS = ps.executeQuery();
+			mutualFundSnapshotRS2 = ps.executeQuery();
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		ArrayList<String> symbols = new ArrayList<String>();
+		ArrayList<Integer> shares = new ArrayList<Integer>();
+		
+		query = "SELECT * FROM OWNS WHERE login = ?";
+		
+		try
+		{
+			ps = connection.prepareStatement(query);
+			ps.setString(1, userName);
+			
+			rs = ps.executeQuery();
+			
+			while(rs.next())
+			{
+				symbols.add(rs.getString(2));
+				shares.add(rs.getInt(3));
+			}
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		float totalPortfolioValue = 0;
+		for(int i = 0; i < symbols.size(); i++)
+		{
+			String symbol = symbols.get(i);
+			System.out.println("\nSymbol: " + symbol);
+			
+			float price = 0;
+			try
+			{
+				while(mutualFundSnapshotRS.next())
+				{
+					if(mutualFundSnapshotRS.getString(1).equals(symbol))
+					{
+						price = mutualFundSnapshotRS.getFloat(7);
+					}
+				}
+			}
+			catch (SQLException e)
+			{
+				e.printStackTrace();
+			}
+			System.out.println("Price: " + price);
+			
+			int share = shares.get(i);
+			System.out.println("Shares: " + share);
+			
+			price = 0;
+			try
+			{
+				while(mutualFundSnapshotRS2.next())
+				{
+					if(mutualFundSnapshotRS2.getString(1).equals(symbol))
+					{
+						price = mutualFundSnapshotRS2.getFloat(7);
+					}
+				}
+			}
+			catch (SQLException e)
+			{
+				e.printStackTrace();
+			}
+			float currentValue = price * share;
+			totalPortfolioValue += currentValue;
+			System.out.println("Current Value: " + currentValue);
+			
+			query = "SELECT * FROM TRXLOG WHERE login = ? AND t_date <= to_date(?, 'YYYY-MM-DD')"; //And Date < dateString
+			float costValue = 0;
+			float sellValue = 0;
+			try
+			{
+				ps = connection.prepareStatement(query);
+				ps.setString(1, userName);
+				ps.setString(2, dateString);
+				rs = ps.executeQuery();
+				
+				while(rs.next())
+				{
+					if(symbol.equals(rs.getString(3)))
+					{
+						if(rs.getString(5).equals("buy"))
+						{
+							costValue += rs.getFloat("amount");
+						}
+						else if(rs.getString(5).equals("sell"))
+						{
+							sellValue += rs.getFloat("amount");
+						}
+					}
+				}
+			}
+			catch(SQLException e)
+			{
+				e.printStackTrace();
+			}
+			System.out.println("Cost Value: " + costValue);
+			
+			float adjustedCost = costValue - sellValue;
+			System.out.println("Adjusted Cost: " + adjustedCost);
+		
+			float yield = currentValue - adjustedCost;
+			System.out.println("Yield: " + yield);
+		}
+		
+		System.out.println("\nTotal Portfolio Value: " + totalPortfolioValue);
 	}
 	
 	private static void changeAllocationPreferences()
