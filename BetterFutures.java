@@ -2,7 +2,6 @@
 //Milestone 2: Java Application to utilize SQL Backend
 
 import java.sql.*;
-import java.text.SimpleDateFormat;
 import java.util.Scanner;
 public class BetterFutures {
 	
@@ -20,6 +19,8 @@ public class BetterFutures {
 	private static Scanner keyboard;		//Read in input from user
 	private static PreparedStatement ps;	//Channel to execute SQL query
 	private static ResultSet rs;			//Stores results from queries
+	
+	private static String userName;
 
 	//Main Driver Application. Consists of a high and low menu
 	//Asks customer or admin to login, provides appropriate options
@@ -72,7 +73,7 @@ public class BetterFutures {
 			isAdmin = true;
 		}
 		
-		String userName = null;
+		userName = null;
 		String password = null;
 		
 		
@@ -139,7 +140,7 @@ public class BetterFutures {
 		return false;
 	}
 	
-	//Print out the enitre contents of the result set
+	//Print out the entire contents of the result set
 	private static void printRS(ResultSet rs)
 	{
 		try
@@ -233,7 +234,7 @@ public class BetterFutures {
 			}else if(input.equals("2")){	//Search Mutual Funds
 				searchMutualFunds();
 			}else if(input.equals("3")){	//Deposit + Invest
-				
+				invest();
 			}else if(input.equals("4")){	//Sell Shares
 				
 			}else if(input.equals("5")){	//Buy Shares
@@ -248,6 +249,104 @@ public class BetterFutures {
 				return;
 			}
 		}
+	}
+	
+	//Customer Option 3
+	//Allow customer to make a deposit into their account
+	private static void invest()
+	{
+		float amount;
+		int transID;
+		
+		System.out.print("\nEnter amount to invest: ");
+		amount = keyboard.nextFloat();
+		keyboard.nextLine();
+		
+		while(amount <= 0)
+		{
+			System.out.print("\nPlease enter an amount greater than 0: ");
+			amount = keyboard.nextInt();
+		}
+		
+		transID = getMaxTransID() + 1;
+		
+		try
+		{
+			connection.setAutoCommit(false);
+			String query = "INSERT INTO TRXLOG VALUES (?, ?, 'MM', to_date(?, 'DD-MM-YY'), 'deposit', NULL, NULL, ?)";
+			ps = connection.prepareStatement(query);
+			System.out.println(transID);
+			System.out.println(userName);
+			System.out.println(getTodayMutualDate());
+			System.out.println(amount); //TEST
+			ps.setInt(1, transID);
+			ps.setString(2, userName);
+			ps.setString(3, getTodayMutualDate());
+			//ps.setDate(3, getTodayMutualDate());
+			ps.setFloat(4, amount);
+			
+			ps.executeUpdate();
+			
+			connection.commit();
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+			try {
+				connection.rollback();
+			} catch (SQLException e1) {
+				e1.printStackTrace();
+			}
+		}
+	}
+	
+	private static String getTodayMutualDate()
+	{
+		String query = "SELECT c_date FROM MUTUALDATE ORDER BY c_date DESC FETCH FIRST 1 ROWS ONLY";
+		String date = null;
+		
+		try
+		{
+			ps = connection.prepareStatement(query);
+			rs = ps.executeQuery();
+			
+			while(rs.next())
+			{
+				Date d = rs.getDate(1); //yyyy-mm-dd
+				date = d.toString();
+				String[] dateArray = date.split("-");
+				date = dateArray[2] + "-" + dateArray[1] + "-" + dateArray[0].substring(2, 4);
+				return date;
+			}
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	private static int getMaxTransID()
+	{
+		String query = "SELECT trans_id FROM TRXLOG ORDER BY trans_id DESC FETCH FIRST 1 ROWS ONLY";
+		
+		try
+		{
+			ps = connection.prepareStatement(query);
+			rs = ps.executeQuery();
+			
+			while(rs.next())
+			{
+				return rs.getInt(1);
+			}
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		return -1;
 	}
 	
 	//Customer Option 2
