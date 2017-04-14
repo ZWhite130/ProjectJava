@@ -251,54 +251,47 @@ public class BetterFutures {
 		}
 	}
 	
-	//Customer Option 3
-	//Allow customer to make a deposit into their account
-	private static void invest()
+	public static void invest()
 	{
-		float amount;
-		int transID;
-		
-		System.out.print("\nEnter amount to invest: ");
-		amount = keyboard.nextFloat();
+		int maxTransID = getMaxTransID();
+		String dateString = getTodayMutualDate();
+		System.out.print("\nEnter deposit amount: ");
+		float amount = keyboard.nextFloat();
 		keyboard.nextLine();
 		
-		while(amount <= 0)
+		if(amount < 0)
 		{
-			System.out.print("\nPlease enter an amount greater than 0: ");
-			amount = keyboard.nextInt();
+			System.out.println("Cannot deposit less than 0.");
+			return;
+		}
+		else if(amount == 0)
+		{
+			return;
 		}
 		
-		transID = getMaxTransID() + 1;
-		
+		String query = "INSERT INTO TRXLOG (trans_id, login, t_date, action, amount) VALUES (?,?,to_date(?, 'YYYY-MM-DD'),?,?)";
 		try
 		{
-			connection.setAutoCommit(false);
-			String query = "INSERT INTO TRXLOG VALUES (?, ?, 'MM', to_date(?, 'DD-MM-YY'), 'deposit', NULL, NULL, ?)";
 			ps = connection.prepareStatement(query);
-			System.out.println(transID);
-			System.out.println(userName);
-			System.out.println(getTodayMutualDate());
-			System.out.println(amount); //TEST
-			ps.setInt(1, transID);
+			ps.setInt(1, maxTransID+1);
 			ps.setString(2, userName);
-			ps.setString(3, getTodayMutualDate());
-			//ps.setDate(3, getTodayMutualDate());
-			ps.setFloat(4, amount);
-			
-			ps.executeUpdate();
-			
+			ps.setString(3,  dateString);
+			ps.setString(4, "deposit");
+			ps.setFloat(5, amount);
+			try {
+				ps.executeUpdate();
+			}
+			catch(SQLException e) {
+				e.printStackTrace();
+				connection.rollback();
+			}
 			connection.commit();
-		}
-		catch (SQLException e)
+			}
+		catch(SQLException e)
 		{
 			e.printStackTrace();
-			try {
-				connection.rollback();
-			} catch (SQLException e1) {
-				e1.printStackTrace();
-			}
 		}
-	}
+	}	
 	
 	private static String getTodayMutualDate()
 	{
@@ -314,9 +307,10 @@ public class BetterFutures {
 			{
 				Date d = rs.getDate(1); //yyyy-mm-dd
 				date = d.toString();
-				String[] dateArray = date.split("-");
-				date = dateArray[2] + "-" + dateArray[1] + "-" + dateArray[0].substring(2, 4);
 				return date;
+				//String[] dateArray = date.split("-");
+				//date = dateArray[2] + "-" + dateArray[1] + "-" + dateArray[0].substring(2, 4);
+				//return date;
 			}
 		}
 		catch (SQLException e)
