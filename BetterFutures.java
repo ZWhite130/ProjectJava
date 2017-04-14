@@ -236,7 +236,7 @@ public class BetterFutures {
 			}else if(input.equals("3")){	//Deposit + Invest
 				invest();
 			}else if(input.equals("4")){	//Sell Shares
-				
+				sellShares();
 			}else if(input.equals("5")){	//Buy Shares
 				
 			}else if(input.equals("6")){	//Conditional Invest
@@ -248,6 +248,86 @@ public class BetterFutures {
 			}else if(input.equals("9")){	//Exit Program
 				return;
 			}
+		}
+	}
+	
+	public static void sellShares()
+	{
+		int shares;
+		String symbol;
+		
+		System.out.print("\nEnter symbol to sell: ");
+		symbol = keyboard.nextLine();
+		
+		System.out.print("Enter # of shares to sell: ");
+		shares = keyboard.nextInt();
+		keyboard.nextLine();
+		
+		if(shares < 0)
+		{
+			System.out.println("Cannot less less than 0.");
+			return;
+		}
+		else if(shares == 0)
+		{
+			return;
+		}
+		
+		String query = "SELECT getPrice(?) from dual";
+		
+		float price = 0;
+		try
+		{
+		ps = connection.prepareStatement(query);
+		ps.setString(1, symbol);
+		
+		rs = ps.executeQuery();
+		while(rs.next())
+		{
+			price = rs.getFloat(1);
+		}
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		
+		//query = "INSERT INTO TRXLOG VALUES (?,?,?,to_date(?, 'YYYY-MM-DD'),'sell',?,?,?)";
+		try
+		{
+			query = "INSERT INTO TRXLOG (trans_id, login, symbol, t_date, action, num_shares, price, amount) VALUES (?,?,?,?,?,?,?,?)";
+			ps = connection.prepareStatement(query);
+			ps.setInt(1, getMaxTransID()+1);
+			ps.setString(2, userName);
+			ps.setString(3, symbol);
+			ps.setString(4, getTodayMutualDate());
+			ps.setString(5, "sell");
+			ps.setInt(6, shares);
+			ps.setFloat(7, price);
+			ps.setFloat(8, shares*price);
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		try {
+			ps.executeUpdate();
+		} catch (SQLException e) {
+			System.out.println("Could not sell requested shares");
+			try {
+				connection.rollback();
+			} catch (SQLException e1) {
+				e1.printStackTrace();
+			}
+			return;
+		}
+		
+		try {
+			connection.commit();
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 	}
 	
