@@ -278,30 +278,33 @@ public class BetterFutures {
 		float price = 0;
 		try
 		{
-		ps = connection.prepareStatement(query);
-		ps.setString(1, symbol);
-		
-		rs = ps.executeQuery();
-		while(rs.next())
-		{
-			price = rs.getFloat(1);
-		}
+			ps = connection.prepareStatement(query);
+			ps.setString(1, symbol);
+			
+			rs = ps.executeQuery();
+			while(rs.next())
+			{
+				price = rs.getFloat(1);
+				System.out.println(price); //TEST
+			}
 		}
 		catch(SQLException e)
 		{
 			e.printStackTrace();
 		}
 		
+		int maxTransID = getMaxTransID();
+		String dateString = getTodayMutualDate();
 		
-		//query = "INSERT INTO TRXLOG VALUES (?,?,?,to_date(?, 'YYYY-MM-DD'),'sell',?,?,?)";
 		try
 		{
-			query = "INSERT INTO TRXLOG (trans_id, login, symbol, t_date, action, num_shares, price, amount) VALUES (?,?,?,?,?,?,?,?)";
+			query = "INSERT INTO TRXLOG (trans_id, login, symbol, t_date, action, num_shares, price, amount) VALUES (?,?,?,to_date(?, 'YYYY-MM-DD'),?,?,?,?)";
 			ps = connection.prepareStatement(query);
-			ps.setInt(1, getMaxTransID()+1);
+			ps.setInt(1, maxTransID + 1);
+			System.out.println(userName); //TEST
 			ps.setString(2, userName);
 			ps.setString(3, symbol);
-			ps.setString(4, getTodayMutualDate());
+			ps.setString(4, dateString);
 			ps.setString(5, "sell");
 			ps.setInt(6, shares);
 			ps.setFloat(7, price);
@@ -315,6 +318,7 @@ public class BetterFutures {
 		try {
 			ps.executeUpdate();
 		} catch (SQLException e) {
+			e.printStackTrace();
 			System.out.println("Could not sell requested shares");
 			try {
 				connection.rollback();
@@ -327,7 +331,7 @@ public class BetterFutures {
 		try {
 			connection.commit();
 		} catch (SQLException e) {
-			e.printStackTrace();
+			System.out.println("Could not sell requested shares");
 		}
 	}
 	
