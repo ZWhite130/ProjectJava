@@ -2,6 +2,7 @@
 //Milestone 2: Java Application to utilize SQL Backend
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Scanner;
 public class BetterFutures {
 	
@@ -238,11 +239,11 @@ public class BetterFutures {
 			}else if(input.equals("4")){	//Sell Shares
 				sellShares();
 			}else if(input.equals("5")){	//Buy Shares
-				
+				buyShares();
 			}else if(input.equals("6")){	//Conditional Invest
 				
 			}else if(input.equals("7")){	//Change Allocation Preference
-				
+				changeAllocationPreferences();
 			}else if(input.equals("8")){	//Customer Portfolio
 				
 			}else if(input.equals("9")){	//Exit Program
@@ -251,7 +252,136 @@ public class BetterFutures {
 		}
 	}
 	
-	public static void sellShares()
+	private static void changeAllocationPreferences()
+	{
+		Date mostRecentDate = null;
+		int maxAllNo = 0;
+		
+		String query = "SELECT max(p_date) FROM ALLOCATION WHERE login = ?";
+		try
+		{
+			ps = connection.prepareStatement(query);
+			ps.setString(1, userName);
+			
+			rs = ps.executeQuery();
+			while(rs.next())
+			{
+				mostRecentDate = rs.getDate(1);
+			}
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		query = "SELECT max(allocation_no) FROM ALLOCATION";
+		try
+		{
+			ps = connection.prepareStatement(query);
+			
+			rs = ps.executeQuery();
+			while(rs.next())
+			{
+				maxAllNo = rs.getInt(1);
+			}
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		String todayDate = getTodayMutualDate();
+		String allDate = mostRecentDate.toString();
+		
+		String[] tdArray = todayDate.split("-");
+		String[] adArray = allDate.split("-");
+		
+		if(tdArray[1].equals(adArray[1]) && tdArray[0].equals(adArray[0]))
+		{
+			System.out.println("\nAllocation has already been changed within the month");
+			return;
+		}
+		
+		System.out.println("Enter DONE when done entering preferences");
+		
+		ArrayList<String> symbols = new ArrayList<String>();
+		ArrayList<Float> percentages = new ArrayList<Float>();
+		
+		String symbol = "";
+		float percent = 0;
+		float percTotal = 0;
+		
+		while(true)
+		{
+			System.out.print("\nEnter symbol: ");
+			symbol = keyboard.nextLine();
+			if(symbol.toUpperCase().equals("DONE"))
+				break;
+			
+			System.out.print("Enter percentage of allocation (0-100): ");
+			percent = keyboard.nextFloat();
+			keyboard.nextLine(); 
+			
+			if(percent < 0 || percent > 100)
+			{
+				System.out.print("Enter percentage of allocation (0-100): ");
+				percent = keyboard.nextFloat();
+				keyboard.nextLine();
+			}
+			
+			percent /= 100;
+			percTotal += percent;
+			
+			symbols.add(symbol);
+			percentages.add(percent);
+		}
+		
+		if(percTotal == 0)
+		{
+			return;
+		}
+		else if(percTotal > 1 || percTotal < 1)
+		{
+			System.out.println("Percentages do not total to 100. Cannot change preferences");
+			return;
+		}
+		
+		try
+		{
+			connection.commit();
+			connection.setAutoCommit(false);
+			
+			query = "INSERT INTO ALLOCATION VALUES (?, ?, to_date(?, 'YYYY-MM-DD'))";
+			ps = connection.prepareStatement(query);
+			ps.setInt(1, maxAllNo + 1);
+			ps.setString(2, userName);
+			ps.setString(3, todayDate);
+			ps.executeUpdate();
+			
+			for(int i = 0; i < symbols.size(); i++)
+			{
+				symbol = symbols.get(i);
+				percent = percentages.get(i);
+				
+				query = "INSERT INTO PREFERS VALUES (?, ?, ?)";
+				ps = connection.prepareStatement(query);
+				ps.setInt(1, maxAllNo + 1);
+				ps.setString(2, symbol);
+				ps.setFloat(3, percent);
+				
+				ps.executeUpdate();
+			}
+			
+			connection.commit();
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+	}
+	
+	private static void sellShares()
 	{
 		int shares;
 		String symbol;
@@ -285,7 +415,6 @@ public class BetterFutures {
 			while(rs.next())
 			{
 				price = rs.getFloat(1);
-				System.out.println(price); //TEST
 			}
 		}
 		catch(SQLException e)
@@ -301,7 +430,6 @@ public class BetterFutures {
 			query = "INSERT INTO TRXLOG (trans_id, login, symbol, t_date, action, num_shares, price, amount) VALUES (?,?,?,to_date(?, 'YYYY-MM-DD'),?,?,?,?)";
 			ps = connection.prepareStatement(query);
 			ps.setInt(1, maxTransID + 1);
-			System.out.println(userName); //TEST
 			ps.setString(2, userName);
 			ps.setString(3, symbol);
 			ps.setString(4, dateString);
@@ -332,6 +460,88 @@ public class BetterFutures {
 			connection.commit();
 		} catch (SQLException e) {
 			System.out.println("Could not sell requested shares");
+		}
+	}
+	
+	private static void buyShares()
+	{
+		int shares;
+		String symbol;
+		
+		System.out.print("\nEnter symbol to buy: ");
+		symbol = keyboard.nextLine();
+		
+		System.out.print("Enter # of shares to buy: ");
+		shares = keyboard.nextInt();
+		keyboard.nextLine();
+		
+		if(shares < 0)
+		{
+			System.out.println("Cannot less less than 0.");
+			return;
+		}
+		else if(shares == 0)
+		{
+			return;
+		}
+		
+		String query = "SELECT getPrice(?) from dual";
+		
+		float price = 0;
+		try
+		{
+			ps = connection.prepareStatement(query);
+			ps.setString(1, symbol);
+			
+			rs = ps.executeQuery();
+			while(rs.next())
+			{
+				price = rs.getFloat(1);
+			}
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		int maxTransID = getMaxTransID();
+		String dateString = getTodayMutualDate();
+		
+		try
+		{
+			query = "INSERT INTO TRXLOG (trans_id, login, symbol, t_date, action, num_shares, price, amount) VALUES (?,?,?,to_date(?, 'YYYY-MM-DD'),?,?,?,?)";
+			ps = connection.prepareStatement(query);
+			ps.setInt(1, maxTransID + 1);
+			ps.setString(2, userName);
+			ps.setString(3, symbol);
+			ps.setString(4, dateString);
+			ps.setString(5, "buy");
+			ps.setInt(6, shares);
+			ps.setFloat(7, price);
+			ps.setFloat(8, shares*price);
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		
+		try {
+			ps.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Could not buy requested shares");
+			try {
+				connection.rollback();
+			} catch (SQLException e1) {
+				e1.printStackTrace();
+			}
+			return;
+		}
+		
+		try {
+			connection.commit();
+		} catch (SQLException e) {
+			System.out.println("Could not buy requested shares");
 		}
 	}
 	
@@ -439,7 +649,6 @@ public class BetterFutures {
 		
 		System.out.print("Enter keyword 2 (Optional): ");
 		keyword2 = keyboard.nextLine();
-		System.out.print("keyword 2 " + keyword2); //TEST
 		
 		if(!keyword2.equals("")) //If 2 keywords entered
 		{
